@@ -10,6 +10,9 @@
     <string name="status_pressed">BUTTON PRESSED</string>
     <string name="status_connected">DEVICE CONNECTED</string>
     <string name="status_failed">CONNECTION FAILED</string>
+    <string name="status_file_not_found">File not found</string>
+
+
 
 
 </resources>

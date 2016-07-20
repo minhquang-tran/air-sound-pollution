@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,73 +11,74 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="edu.rmit.sepm.airsoundpollution.MainActivity">
 
+    <TableRow
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
 
+        <Button
+            android:id="@+id/button_connect"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="connect_bluetooth"
+            android:text="@string/string_connect" />
 
+        <Button
+            android:id="@+id/button_receive"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="receive_data"
+            android:text="@string/string_receive" />
+    </TableRow>
 
-    <TableLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
+    <TableRow
+        android:layout_width="fill_parent"
+        android:layout_height="0dp">
 
-        <TableRow
+        <Button
+            android:id="@+id/button_view"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="view_data"
+            android:text="@string/string_view" />
+
+        <Button
+            android:id="@+id/button_upload"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="upload_data"
+            android:text="@string/string_upload" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:id="@+id/text_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/string_status" />
+    </TableRow>
+
+    <TableRow>
+
+        <ScrollView
             android:layout_width="fill_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" >
+            android:layout_height="fill_parent"
+            android:scrollbars="vertical"
+            android:visibility="visible">
 
-            <Button
-                android:id="@+id/button_connect"
-                android:layout_width="0dp"
-                android:layout_height="fill_parent"
-                android:layout_weight="1"
-                android:text="@string/string_connect"
-                android:onClick="connect_bluetooth"/>
-
-            <Button
-                android:id="@+id/button_receive"
-                android:layout_width="0dp"
-                android:layout_height="fill_parent"
-                android:layout_weight="1"
-                android:text="@string/string_receive"
-                android:onClick="receive_data"/>
-        </TableRow>
-
-        <TableRow
-            android:layout_width="fill_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" >
-
-            <Button
-                android:id="@+id/button_view"
-                android:layout_width="0dp"
-                android:layout_height="fill_parent"
-                android:layout_weight="1"
-                android:text="@string/string_view"
-                android:onClick="view_data"/>
-
-            <Button
-                android:id="@+id/button_upload"
-                android:layout_width="0dp"
-                android:layout_height="fill_parent"
-                android:layout_weight="1"
-                android:text="@string/string_upload"
-                android:onClick="upload_data"/>
-        </TableRow>
-        <TableRow>
             <TextView
-                android:id="@+id/status_text"
+                android:id="@+id/text_data"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/string_status" />
-        </TableRow>
+                android:text="Print data here" />
+        </ScrollView>
+    </TableRow>
 
-    </TableLayout>
-
-    <TextView
-        android:id="@+id/data_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Print data here"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true"/>
+</TableLayout>
 
 
-</RelativeLayout>
+
