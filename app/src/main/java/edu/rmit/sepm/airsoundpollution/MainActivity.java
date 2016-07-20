@@ -7,8 +7,10 @@ import android.view.View;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -42,9 +44,8 @@ public class MainActivity extends AppCompatActivity {
         //read data from file
 
         //update local storage
-        String filePath = getFilesDir().toString() + "/pollution_data.csv";
 
-        File internalFile = new File(filePath);
+        File internalFile = new File(getFilesDir(), "pollution_data.csv");
 
         //create file if not existed
         if(!internalFile.exists()) {
@@ -55,9 +56,21 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else status.setText("File existed at " + filePath);
+        } else status.setText("File existed at " + internalFile.getPath());
 
         //append new line
+        try {
+            BufferedWriter bW = new BufferedWriter(new FileWriter(internalFile, true));
+            //future for each loop here
+            bW.write("0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
+            bW.newLine();
+
+            bW.flush();
+            bW.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -66,19 +79,19 @@ public class MainActivity extends AppCompatActivity {
         TextView data = (TextView) findViewById(R.id.text_data);
         data.setMovementMethod(new ScrollingMovementMethod());
 
-        String filePath = getFilesDir().toString() + "/pollution_data.csv";
-        //String filePath = "data/pollution_data.csv";
-        File internalFile = new File(filePath);
+        File internalFile = new File(getFilesDir(), "pollution_data.csv");
 
         String output = null;
         try {
-            output = getStringFromFile(filePath);
-            status.setText(filePath);
+            output = getStringFromFile(internalFile);
+            status.setText(internalFile.getPath());
         } catch (Exception e) {
             e.printStackTrace();
             status.setText(R.string.status_file_not_found);
         }
         data.setText(output);
+
+        //scroll to bottom if necessary
     }
 
     public void upload_data(View view) {
@@ -97,8 +110,8 @@ public class MainActivity extends AppCompatActivity {
         return sb.toString();
     }
 
-    public static String getStringFromFile (String filePath) throws Exception {
-        File fl = new File(filePath);
+    public static String getStringFromFile (/*String filePath*/ File fl) throws Exception {
+        //File fl = new File(filePath);
         FileInputStream fin = new FileInputStream(fl);
         String ret = convertStreamToString(fin);
         //Make sure you close all streams.
