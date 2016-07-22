@@ -2,7 +2,6 @@ package edu.rmit.sepm.airsoundpollution;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.TextView;
 
@@ -10,10 +9,12 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -48,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         File internalFile = new File(getFilesDir(), "pollution_data.csv");
 
         //create file if not existed
-        if(!internalFile.exists()) {
+        if (!internalFile.exists()) {
             try {
                 internalFile.createNewFile();
                 //status.setText(getFilesDir().toString());
@@ -74,10 +75,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void view_data(View view){
+    public void view_data(View view) {
         TextView status = (TextView) findViewById(R.id.text_status);
         TextView data = (TextView) findViewById(R.id.text_data);
-        data.setMovementMethod(new ScrollingMovementMethod());
+        //data.setMovementMethod(new ScrollingMovementMethod());
 
         File internalFile = new File(getFilesDir(), "pollution_data.csv");
 
@@ -95,6 +96,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void upload_data(View view) {
+        TextView status = (TextView) findViewById(R.id.text_status);
+        File internalFile = new File(getFilesDir(), "pollution_data.csv");
+
+
+        //Empty file
+        PrintWriter pw = null;
+        try {
+            pw = new PrintWriter(internalFile);
+            pw.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -110,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         return sb.toString();
     }
 
-    public static String getStringFromFile (/*String filePath*/ File fl) throws Exception {
+    public static String getStringFromFile(/*String filePath*/ File fl) throws Exception {
         //File fl = new File(filePath);
         FileInputStream fin = new FileInputStream(fl);
         String ret = convertStreamToString(fin);
