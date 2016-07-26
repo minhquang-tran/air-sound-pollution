@@ -8,9 +8,11 @@
 
     <string name="string_status">Status text here</string>
     <string name="status_pressed">BUTTON PRESSED</string>
-    <string name="status_connected">DEVICE CONNECTED</string>
+    <string name="status_bt_na">Bluetooth not supported</string>
+
+    <string name="status_connected">Connection thread: STARTED</string>
     <string name="status_failed">CONNECTION FAILED</string>
-    <string name="status_file_not_found">File not found</string>
+    <string name="status_file_not_exist">File not existed. Create one by retrieving data</string>
 
 
 

@@ -1,5 +1,9 @@
 package edu.rmit.sepm.airsoundpollution;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -15,6 +19,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.Set;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,9 +34,32 @@ public class MainActivity extends AppCompatActivity {
         TextView status = (TextView) findViewById(R.id.text_status);
 
         //bluetooth connection handling here
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            status.setText(getString(R.string.status_bt_na));
+        } else {
+            //enable bluetooth if not
+            if (!mBluetoothAdapter.isEnabled()) {
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBtIntent, 1);
+            }
+
+            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+            if (pairedDevices.size() > 0) {
+                //status.setText("" + pairedDevices.size());
+                for (BluetoothDevice device : pairedDevices) {
+                    //TODO: Determine if device is Arduino with device.get***
+                    BluetoothDevice mDevice = device;
+
+                    ConnectThread mConnectThread = new ConnectThread(mDevice);
+                    mConnectThread.start();
+                    status.setText(getString(R.string.status_connected));
+                }
+            }
+        }
 
         //example on changing textview
-        status.setText(getString(R.string.status_pressed));
+        //status.setText(getString(R.string.status_pressed));
         //Alternate short version
         //((TextView) findViewById(R.id.text_status)).setText(getString(R.string.status_pressed));
 
@@ -55,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
                 //status.setText(getFilesDir().toString());
 
             } catch (IOException e) {
-                e.printStackTrace();
+                status.setText(e.toString());
             }
         } else status.setText("File existed at " + internalFile.getPath());
 
@@ -70,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
             bW.close();
 
         } catch (IOException e) {
-            e.printStackTrace();
+            status.setText(e.toString());
         }
 
     }
@@ -87,8 +116,11 @@ public class MainActivity extends AppCompatActivity {
             output = getStringFromFile(internalFile);
             status.setText(internalFile.getPath());
         } catch (Exception e) {
-            e.printStackTrace();
-            status.setText(R.string.status_file_not_found);
+            if (e instanceof FileNotFoundException) {
+                status.setText(getString(R.string.status_file_not_exist));
+            } else {
+                status.setText(e.toString());
+            }
         }
         data.setText(output);
 
@@ -106,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             pw = new PrintWriter(internalFile);
             pw.close();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            status.setText(e.toString());
         }
 
     }
@@ -131,4 +163,46 @@ public class MainActivity extends AppCompatActivity {
         fin.close();
         return ret;
     }
+
+    private class ConnectThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final BluetoothDevice mmDevice;
+        private final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+        private final TextView status = (TextView) findViewById(R.id.text_status);
+
+        public ConnectThread(BluetoothDevice device) {
+            BluetoothSocket tmp = null;
+            mmDevice = device;
+            try {
+                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException e) {
+                status.setText(e.toString());
+            }
+            mmSocket = tmp;
+        }
+
+        public void run() {
+            BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            mBluetoothAdapter.cancelDiscovery();
+            try {
+                mmSocket.connect();
+            } catch (IOException connectException) {
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException) {
+                    status.setText(closeException.toString());
+                }
+            }
+        }
+
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) {
+                status.setText(e.toString());
+            }
+        }
+    }
 }
+
+
