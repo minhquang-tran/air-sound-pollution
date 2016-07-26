@@ -23,21 +23,32 @@ import java.util.Set;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
+    TextView status;
+    TextView data;
+    BluetoothAdapter mBluetoothAdapter;
+    ConnectThread mConnectThread;
+    File internalFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        status = (TextView) findViewById(R.id.text_status);
+        data = (TextView) findViewById(R.id.text_data);
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        internalFile = new File(getFilesDir(), "pollution_data.csv");
+
+        if (mBluetoothAdapter == null) {
+            status.setText(getString(R.string.status_bt_na));
+            findViewById(R.id.button_connect).setEnabled(false);
+        }
     }
 
     public void connect_bluetooth(View view) {
-        TextView status = (TextView) findViewById(R.id.text_status);
 
         //bluetooth connection handling here
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            status.setText(getString(R.string.status_bt_na));
-        } else {
+        //BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             //enable bluetooth if not
             if (!mBluetoothAdapter.isEnabled()) {
                 Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -51,12 +62,12 @@ public class MainActivity extends AppCompatActivity {
                     //TODO: Determine if device is Arduino with device.get***
                     BluetoothDevice mDevice = device;
 
-                    ConnectThread mConnectThread = new ConnectThread(mDevice);
+                    mConnectThread = new ConnectThread(mDevice);
                     mConnectThread.start();
                     status.setText(getString(R.string.status_connected));
                 }
             }
-        }
+
 
         //example on changing textview
         //status.setText(getString(R.string.status_pressed));
@@ -67,15 +78,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void receive_data(View view) {
-        TextView status = (TextView) findViewById(R.id.text_status);
 
         //change name to temp.* so device can create a new file to write
 
         //read data from file
 
         //update local storage
-
-        File internalFile = new File(getFilesDir(), "pollution_data.csv");
 
         //create file if not existed
         if (!internalFile.exists()) {
@@ -105,11 +113,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void view_data(View view) {
-        TextView status = (TextView) findViewById(R.id.text_status);
-        TextView data = (TextView) findViewById(R.id.text_data);
-        //data.setMovementMethod(new ScrollingMovementMethod());
-
-        File internalFile = new File(getFilesDir(), "pollution_data.csv");
 
         String output = null;
         try {
@@ -128,9 +131,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void upload_data(View view) {
-        TextView status = (TextView) findViewById(R.id.text_status);
-        File internalFile = new File(getFilesDir(), "pollution_data.csv");
-
 
         //Empty file
         PrintWriter pw = null;
@@ -168,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
         private final BluetoothSocket mmSocket;
         private final BluetoothDevice mmDevice;
         private final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
-        private final TextView status = (TextView) findViewById(R.id.text_status);
 
         public ConnectThread(BluetoothDevice device) {
             BluetoothSocket tmp = null;
