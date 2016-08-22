@@ -7,14 +7,18 @@
     <string name="string_upload">Upload data</string>
 
     <string name="string_status">Status text here</string>
-    <string name="status_pressed">BUTTON PRESSED</string>
-    <string name="status_bt_na">Bluetooth not supported</string>
+    <string name="status_received">Data received</string>
+    <string name="status_bt_na">Bluetooth 4.0 not supported</string>
+    <string name="status_ble_na">Bluetooth 4.0 not supported</string>
+    <string name="title_devices">BLE Device Scan</string>
+
 
     <string name="status_connected">Connection thread: STARTED</string>
     <string name="status_failed">CONNECTION FAILED</string>
     <string name="status_file_not_exist">File not existed. Create one by retrieving data</string>
-
-
+    <string name="menu_scan">Scan</string>
+    <string name="menu_stop">Stop</string>
+    <string name="unknown_device">Unknown device</string>
 
 
 </resources>

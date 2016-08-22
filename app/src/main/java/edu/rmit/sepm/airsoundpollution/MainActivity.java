@@ -2,12 +2,17 @@ package edu.rmit.sepm.airsoundpollution;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
+
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,15 +24,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.util.Set;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
     TextView status;
     TextView data;
-    BluetoothAdapter mBluetoothAdapter;
-    ConnectThread mConnectThread;
+    BluetoothAdapter bleAdapter;
     File internalFile;
+
+    private static final int REQUEST_ENABLE_BT = 1;
+    private static final int SCAN_DEVICE_REQUEST = 2;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,26 +42,37 @@ public class MainActivity extends AppCompatActivity {
 
         status = (TextView) findViewById(R.id.text_status);
         data = (TextView) findViewById(R.id.text_data);
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         internalFile = new File(getFilesDir(), "pollution_data.csv");
 
-        if (mBluetoothAdapter == null) {
+        // Use this check to determine whether BLE is supported on the device. Then
+        // you can selectively disable BLE-related features.
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             status.setText(getString(R.string.status_bt_na));
             findViewById(R.id.button_connect).setEnabled(false);
         }
+
+        // Initializes Bluetooth adapter.
+        final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bleAdapter = bluetoothManager.getAdapter();
     }
 
     public void connect_bluetooth(View view) {
 
         //bluetooth connection handling here
-        //BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        //BluetoothAdapter bleAdapter = BluetoothAdapter.getDefaultAdapter();
             //enable bluetooth if not
-            if (!mBluetoothAdapter.isEnabled()) {
+            if (bleAdapter == null || !bleAdapter.isEnabled()) {
                 Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, 1);
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
             }
 
-            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        if(bleAdapter.isEnabled() && bleAdapter != null) {
+            Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
+            startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
+        }
+
+        /*
+            Set<BluetoothDevice> pairedDevices = bleAdapter.getBondedDevices();
             if (pairedDevices.size() > 0) {
                 //status.setText("" + pairedDevices.size());
                 for (BluetoothDevice device : pairedDevices) {
@@ -67,13 +84,23 @@ public class MainActivity extends AppCompatActivity {
                     status.setText(getString(R.string.status_connected));
                 }
             }
-
+        */
 
         //example on changing textview
         //status.setText(getString(R.string.status_pressed));
         //Alternate short version
         //((TextView) findViewById(R.id.text_status)).setText(getString(R.string.status_pressed));
 
+
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
+            BluetoothDevice device = data.getParcelableExtra("Device");
+            status.setText(device.getUuids().toString());
+        }
 
     }
 
@@ -84,17 +111,20 @@ public class MainActivity extends AppCompatActivity {
         //read data from file
 
         //update local storage
+        //Toast.makeText(this, "abc", Toast.LENGTH_LONG).show();
 
         //create file if not existed
         if (!internalFile.exists()) {
             try {
-                internalFile.createNewFile();
-                //status.setText(getFilesDir().toString());
+                if (internalFile.createNewFile())
+                    Toast.makeText(this, "File created: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
 
             } catch (IOException e) {
                 status.setText(e.toString());
             }
-        } else status.setText("File existed at " + internalFile.getPath());
+        } else
+            Toast.makeText(this, "New data appended to: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
+
 
         //append new line
         try {
@@ -105,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
 
             bW.flush();
             bW.close();
+            status.setText(getString(R.string.status_received));
 
         } catch (IOException e) {
             status.setText(e.toString());
@@ -164,44 +195,6 @@ public class MainActivity extends AppCompatActivity {
         return ret;
     }
 
-    private class ConnectThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final BluetoothDevice mmDevice;
-        private final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
-
-        public ConnectThread(BluetoothDevice device) {
-            BluetoothSocket tmp = null;
-            mmDevice = device;
-            try {
-                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-            } catch (IOException e) {
-                status.setText(e.toString());
-            }
-            mmSocket = tmp;
-        }
-
-        public void run() {
-            BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            mBluetoothAdapter.cancelDiscovery();
-            try {
-                mmSocket.connect();
-            } catch (IOException connectException) {
-                try {
-                    mmSocket.close();
-                } catch (IOException closeException) {
-                    status.setText(closeException.toString());
-                }
-            }
-        }
-
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) {
-                status.setText(e.toString());
-            }
-        }
-    }
 }
 
 
