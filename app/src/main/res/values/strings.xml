@@ -10,7 +10,7 @@
     <string name="status_received">Data received</string>
     <string name="status_bt_na">Bluetooth 4.0 not supported</string>
     <string name="status_ble_na">Bluetooth 4.0 not supported</string>
-    <string name="title_devices">BLE Device Scan</string>
+    <string name="title_scanner">BLE Device Scanner</string>
 
 
     <string name="status_connected">Connection thread: STARTED</string>

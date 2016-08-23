@@ -1,12 +1,10 @@
 package edu.rmit.sepm.airsoundpollution;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -57,49 +55,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void connect_bluetooth(View view) {
-
-        //bluetooth connection handling here
-        //BluetoothAdapter bleAdapter = BluetoothAdapter.getDefaultAdapter();
-            //enable bluetooth if not
-            if (bleAdapter == null || !bleAdapter.isEnabled()) {
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            }
-
-        if(bleAdapter.isEnabled() && bleAdapter != null) {
-            Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
-            startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
-        }
-
-        /*
-            Set<BluetoothDevice> pairedDevices = bleAdapter.getBondedDevices();
-            if (pairedDevices.size() > 0) {
-                //status.setText("" + pairedDevices.size());
-                for (BluetoothDevice device : pairedDevices) {
-                    //TODO: Determine if device is Arduino with device.get***
-                    BluetoothDevice mDevice = device;
-
-                    mConnectThread = new ConnectThread(mDevice);
-                    mConnectThread.start();
-                    status.setText(getString(R.string.status_connected));
-                }
-            }
-        */
-
-        //example on changing textview
-        //status.setText(getString(R.string.status_pressed));
-        //Alternate short version
-        //((TextView) findViewById(R.id.text_status)).setText(getString(R.string.status_pressed));
-
-
+        Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
+        startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
-            BluetoothDevice device = data.getParcelableExtra("Device");
-            status.setText(device.getUuids().toString());
+            String deviceName = data.getStringExtra("DeviceName");
+            String deviceAddress = data.getStringExtra("DeviceAddress");
+            status.setText(deviceName + " " + deviceAddress);
         }
 
     }
