@@ -16,6 +16,7 @@
 
 package edu.rmit.sepm.airsoundpollution;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -147,6 +148,16 @@ public class DeviceScanActivity extends AppCompatActivity {
         mLeDeviceListAdapter = new LeDeviceListAdapter();
         deviceList.setAdapter(mLeDeviceListAdapter);
         scanLeDevice(true);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // User chose not to enable Bluetooth.
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
+
+            setResult(RESULT_CANCELED, data);
+            finish();
+        }
     }
 
     @Override

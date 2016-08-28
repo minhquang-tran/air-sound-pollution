@@ -1,12 +1,20 @@
 package edu.rmit.sepm.airsoundpollution;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,12 +30,28 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    TextView status;
-    TextView data;
-    BluetoothAdapter bleAdapter;
-    File internalFile;
+    private final static String TAG = MainActivity.class.getSimpleName();
+
+
+    private TextView status;
+    private TextView data;
+    private BluetoothAdapter bleAdapter;
+    private File internalFile;
+    BufferedWriter bW;
+
+    private String mDeviceAddress;
+    private BluetoothLeService mBluetoothLeService;
+    private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
+            new ArrayList<>();
+    private boolean mConnected = false;
+
+    private final String LIST_NAME = "NAME";
+    private final String LIST_UUID = "UUID";
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int SCAN_DEVICE_REQUEST = 2;
@@ -54,6 +78,19 @@ public class MainActivity extends AppCompatActivity {
         bleAdapter = bluetoothManager.getAdapter();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(mServiceConnection);
+        mBluetoothLeService = null;
+        try {
+            bW.flush();
+            bW.close();
+        } catch (IOException e) {
+            status.setText(e.toString());
+        }
+    }
+
     public void connect_bluetooth(View view) {
         Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
         startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
@@ -64,15 +101,18 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
             String deviceName = data.getStringExtra("DeviceName");
-            String deviceAddress = data.getStringExtra("DeviceAddress");
-            status.setText(deviceName + " " + deviceAddress);
+            String mDeviceAddress = data.getStringExtra("DeviceAddress");
+            status.setText(deviceName + " " + mDeviceAddress);
         }
 
     }
 
     public void receive_data(View view) {
 
-        //change name to temp.* so device can create a new file to write
+        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
+        bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+        final boolean result = mBluetoothLeService.connect(mDeviceAddress);
+        Log.d(TAG, "Connect request result=" + result);
 
         //read data from file
 
@@ -91,10 +131,16 @@ public class MainActivity extends AppCompatActivity {
         } else
             Toast.makeText(this, "New data appended to: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
 
+        try {
+            bW = new BufferedWriter(new FileWriter(internalFile, true));
+        } catch (IOException e) {
+            status.setText(e.toString());
+        }
+
 
         //append new line
+        /*
         try {
-            BufferedWriter bW = new BufferedWriter(new FileWriter(internalFile, true));
             //future for each loop here
             bW.write("0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
             bW.newLine();
@@ -106,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             status.setText(e.toString());
         }
+        */
 
     }
 
@@ -140,6 +187,109 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Code to manage Service lifecycle.
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
+            if (!mBluetoothLeService.initialize()) {
+                Log.e(TAG, "Unable to initialize Bluetooth");
+                finish();
+            }
+            // Automatically connects to the device upon successful start-up initialization.
+            mBluetoothLeService.connect(mDeviceAddress);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mBluetoothLeService = null;
+        }
+    };
+
+    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+                mConnected = true;
+                //updateConnectionState(R.string.connected);
+                invalidateOptionsMenu();
+            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                mConnected = false;
+                //updateConnectionState(R.string.disconnected);
+                invalidateOptionsMenu();
+                data.setText("");
+            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                // Show all the supported services and characteristics on the user interface.
+                //displayGattServices(mBluetoothLeService.getSupportedGattServices());
+            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                try {
+                    bW.write(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+                } catch (IOException e) {
+                    status.setText(e.toString());
+                }
+
+
+            }
+        }
+    };
+
+    // Demonstrates how to iterate through the supported GATT Services/Characteristics.
+    // In this sample, we populate the data structure that is bound to the ExpandableListView
+    // on the UI.
+    /*private void displayGattServices(List<BluetoothGattService> gattServices) {
+        if (gattServices == null) return;
+        String uuid = null;
+        String unknownServiceString = getResources().getString(R.string.unknown_service);
+        String unknownCharaString = getResources().getString(R.string.unknown_characteristic);
+        ArrayList<HashMap<String, String>> gattServiceData = new ArrayList<HashMap<String, String>>();
+        ArrayList<ArrayList<HashMap<String, String>>> gattCharacteristicData
+                = new ArrayList<ArrayList<HashMap<String, String>>>();
+        mGattCharacteristics = new ArrayList<>();
+
+        // Loops through available GATT Services.
+        for (BluetoothGattService gattService : gattServices) {
+            HashMap<String, String> currentServiceData = new HashMap<>();
+            uuid = gattService.getUuid().toString();
+            currentServiceData.put(
+                    LIST_NAME, Attributes.lookup(uuid, unknownServiceString));
+            currentServiceData.put(LIST_UUID, uuid);
+            gattServiceData.add(currentServiceData);
+
+            ArrayList<HashMap<String, String>> gattCharacteristicGroupData =
+                    new ArrayList<>();
+            List<BluetoothGattCharacteristic> gattCharacteristics =
+                    gattService.getCharacteristics();
+            ArrayList<BluetoothGattCharacteristic> charas =
+                    new ArrayList<>();
+
+            // Loops through available Characteristics.
+            for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
+                charas.add(gattCharacteristic);
+                HashMap<String, String> currentCharaData = new HashMap<String, String>();
+                uuid = gattCharacteristic.getUuid().toString();
+                currentCharaData.put(
+                        LIST_NAME, Attributes.lookup(uuid, unknownCharaString));
+                currentCharaData.put(LIST_UUID, uuid);
+                gattCharacteristicGroupData.add(currentCharaData);
+            }
+            mGattCharacteristics.add(charas);
+            gattCharacteristicData.add(gattCharacteristicGroupData);
+        }
+    }*/
+
+    private static IntentFilter makeGattUpdateIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        return intentFilter;
+    }
+
+
+    //2 Methods below are for printing out the data in internal file. Used for debugging purpose
     //http://www.java2s.com/Code/Java/File-Input-Output/ConvertInputStreamtoString.htm
     public static String convertStreamToString(InputStream is) throws Exception {
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
