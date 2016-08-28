@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView status;
     private TextView data;
-    private BluetoothAdapter bleAdapter;
+    //private BluetoothAdapter bleAdapter;
     private File internalFile;
     BufferedWriter bW;
 
@@ -72,10 +72,12 @@ public class MainActivity extends AppCompatActivity {
             status.setText(getString(R.string.status_bt_na));
             findViewById(R.id.button_connect).setEnabled(false);
         }
+        findViewById(R.id.button_receive).setEnabled(false);
+
 
         // Initializes Bluetooth adapter.
-        final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        bleAdapter = bluetoothManager.getAdapter();
+        //final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        //bleAdapter = bluetoothManager.getAdapter();
     }
 
     @Override
@@ -101,8 +103,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
             String deviceName = data.getStringExtra("DeviceName");
-            String mDeviceAddress = data.getStringExtra("DeviceAddress");
+            mDeviceAddress = data.getStringExtra("DeviceAddress");
             status.setText(deviceName + " " + mDeviceAddress);
+            if (!mDeviceAddress.isEmpty()) {
+                findViewById(R.id.button_receive).setEnabled(true);
+            }
         }
 
     }
@@ -238,7 +243,8 @@ public class MainActivity extends AppCompatActivity {
     // Demonstrates how to iterate through the supported GATT Services/Characteristics.
     // In this sample, we populate the data structure that is bound to the ExpandableListView
     // on the UI.
-    /*private void displayGattServices(List<BluetoothGattService> gattServices) {
+    /*
+    private void displayGattServices(List<BluetoothGattService> gattServices) {
         if (gattServices == null) return;
         String uuid = null;
         String unknownServiceString = getResources().getString(R.string.unknown_service);
@@ -277,7 +283,8 @@ public class MainActivity extends AppCompatActivity {
             mGattCharacteristics.add(charas);
             gattCharacteristicData.add(gattCharacteristicGroupData);
         }
-    }*/
+    }
+
 
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
@@ -287,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         return intentFilter;
     }
+    */
 
 
     //2 Methods below are for printing out the data in internal file. Used for debugging purpose
