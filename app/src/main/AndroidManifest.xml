@@ -30,6 +30,7 @@
         <activity
             android:name=".DeviceScanActivity"
             android:label="@string/title_scanner"/>
+        <service android:name=".BluetoothLeService" android:enabled="true"/>
     </application>
 
 

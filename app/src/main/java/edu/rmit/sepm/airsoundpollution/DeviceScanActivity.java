@@ -71,8 +71,8 @@ public class DeviceScanActivity extends AppCompatActivity {
                     mScanning = false;
                 }
                 Intent data = new Intent();
-                data.putExtra("DeviceName", device.getName());
-                data.putExtra("DeviceAddress", device.getAddress());
+                data.putExtra(MainActivity.EXTRAS_DEVICE_NAME, device.getName());
+                data.putExtra(MainActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
                 setResult(RESULT_OK, data);
                 finish();
             }
