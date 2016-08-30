@@ -24,17 +24,27 @@
             android:text="@string/string_connect" />
 
         <Button
+            android:id="@+id/button_service"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="start_service"
+            android:text="@string/string_service" />
+
+
+    </TableRow>
+
+    <TableRow
+        android:layout_width="fill_parent"
+        android:layout_height="0dp">
+
+        <Button
             android:id="@+id/button_receive"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:onClick="receive_data"
             android:text="@string/string_receive" />
-    </TableRow>
-
-    <TableRow
-        android:layout_width="fill_parent"
-        android:layout_height="0dp">
 
         <Button
             android:id="@+id/button_view"

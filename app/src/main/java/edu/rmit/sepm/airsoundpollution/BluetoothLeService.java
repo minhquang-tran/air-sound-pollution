@@ -66,6 +66,8 @@ public class BluetoothLeService extends Service {
     public final static UUID UUID_AIR_SOUND_SOLUTION =
             UUID.fromString(Attributes.AIR_SOUND_SOLUTION);
 
+
+
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
@@ -103,7 +105,7 @@ public class BluetoothLeService extends Service {
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                //broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
         }
 
@@ -129,11 +131,15 @@ public class BluetoothLeService extends Service {
 
             // For all other profiles, writes the data formatted in HEX.
             final byte[] data = characteristic.getValue();
+
             if (data != null && data.length > 0) {
                 final StringBuilder stringBuilder = new StringBuilder(data.length);
                 for(byte byteChar : data)
                     stringBuilder.append(String.format("%02X ", byteChar));
-                intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+                Log.i(TAG,new String(data));
+                intent.putExtra(EXTRA_DATA, new String(data));
+                //intent.putExtra(EXTRA_DATA, data);
+
             }
 
         sendBroadcast(intent);
@@ -283,7 +289,7 @@ public class BluetoothLeService extends Service {
         }
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
 
-        Log.i(TAG, UUID_AIR_SOUND_SOLUTION.toString() + " vs " + characteristic.getUuid());
+        //Log.i(TAG, UUID_AIR_SOUND_SOLUTION.toString() + " vs " + characteristic.getUuid());
         /*if (UUID_AIR_SOUND_SOLUTION.equals(characteristic.getUuid())) {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID.fromString(Attributes.CLIENT_CHARACTERISTIC_CONFIG));
