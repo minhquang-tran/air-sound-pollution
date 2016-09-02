@@ -416,6 +416,8 @@ public class MainActivity extends AppCompatActivity {
         private final String ERROR_FILE_EMPTY = "File is empty!";
         private final String ERROR_TERMINATED = "RESPONSE NOT OK. TERMINATED";
 
+        Scanner fileScanner;
+
         @Override
         protected String doInBackground(String... params) {
             return uploadData();
@@ -427,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         private String uploadData() {
-            Scanner fileScanner;
+
             HttpURLConnection httpcon;
             OutputStream os;
             BufferedWriter writer;
@@ -451,7 +453,7 @@ public class MainActivity extends AppCompatActivity {
                         httpcon.connect();
                         os = httpcon.getOutputStream();
                         writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-                        writer.write(body);
+                        //writer.write(body);
                         writer.close();
                         responseCode = httpcon.getResponseCode();
                         Log.i(TAG, "" + responseCode);
@@ -536,7 +538,7 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject grandJson = new JSONObject();
                     grandJson.accumulate("UUID", UUID.randomUUID());
                     grandJson.accumulate("deviceID", MainActivity.imei);
-                    grandJson.accumulate(DataSig.capturedAt.name(), dataArray[DataSig.capturedAt.ordinal()]/*strToTimestamp(dataArray[DataSig.capturedAt.ordinal()])*/);
+                    grandJson.accumulate(DataSig.capturedAt.name(), /*dataArray[DataSig.capturedAt.ordinal()]*/strToTimestamp(dataArray[DataSig.capturedAt.ordinal()]));
                     grandJson.accumulate("data", data);
 
                     return grandJson.toString();
@@ -549,13 +551,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         private long strToTimestamp(String input) {
-            long timeLong = (long) (Double.parseDouble(input) * 1000);
-//            SimpleDateFormat df = new SimpleDateFormat("MMM dd yyyy HH:mm:ss.SSS zzz", Locale.US);
-            Date date = new Date(timeLong);
-            SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US);
-
+            SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss.SSS", Locale.US);
             try {
-                date = df.parse(input);
+                Date date = df.parse(input);
                 return date.getTime();
             } catch (ParseException e) {
                 e.printStackTrace();
