@@ -453,7 +453,7 @@ public class MainActivity extends AppCompatActivity {
                         httpcon.connect();
                         os = httpcon.getOutputStream();
                         writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-                        //writer.write(body);
+                        writer.write(body);
                         writer.close();
                         responseCode = httpcon.getResponseCode();
                         Log.i(TAG, "" + responseCode);
@@ -551,6 +551,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         private long strToTimestamp(String input) {
+//            input = "19700101000000.000";
             SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss.SSS", Locale.US);
             try {
                 Date date = df.parse(input);
