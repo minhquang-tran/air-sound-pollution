@@ -150,8 +150,8 @@ public class MainActivity extends AppCompatActivity {
             data.accumulate("gps", gps);
 
             testJSON = new JSONObject();
-            testJSON.accumulate("UUID", "testing"/*UUID.randomUUID()*/);
-            testJSON.accumulate("deviceID", "pair"/*imei*/);
+            testJSON.accumulate("UUID", "another"/*UUID.randomUUID()*/);
+            testJSON.accumulate("deviceID", "triple"/*imei*/);
             testJSON.accumulate("capturedAt", 1572407685);
             testJSON.accumulate("data", data);
 
@@ -446,15 +446,22 @@ public class MainActivity extends AppCompatActivity {
                 String testString = testJSON.toString();
                 Log.i(TAG, testString);
 
+                for (int i = 0; i<3; i++) {
+                    httpcon = getConnection();
+                    httpcon.connect();
+                    os = httpcon.getOutputStream();
+                    writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                    writer.write(testString);
+                    writer.close();
+                    int res = httpcon.getResponseCode();
+                    Log.i(TAG, "" + res);
+                    os.close();
 
-                writer.write(testString);
-                writer.close();
-                int res = httpcon.getResponseCode();
-                Log.i(TAG,""+res);
+                }
 
 
 
-                os.close();
+//                os.close();
                 httpcon.disconnect();
 
             } catch (IOException e) {
