@@ -26,6 +26,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -149,8 +150,8 @@ public class MainActivity extends AppCompatActivity {
             data.accumulate("gps", gps);
 
             testJSON = new JSONObject();
-            testJSON.accumulate("UUID", "i"/*UUID.randomUUID()*/);
-            testJSON.accumulate("deviceID", "suck"/*imei*/);
+            testJSON.accumulate("UUID", "testing"/*UUID.randomUUID()*/);
+            testJSON.accumulate("deviceID", "pair"/*imei*/);
             testJSON.accumulate("capturedAt", 1572407685);
             testJSON.accumulate("data", data);
 
@@ -405,8 +406,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(Boolean result) {
-            Log.i(TAG, ""+result);
-
             if (result) {
                 Toast.makeText(getApplicationContext(), "Task done", Toast.LENGTH_LONG).show();
                 Log.i(TAG, "task done");
@@ -418,6 +417,7 @@ public class MainActivity extends AppCompatActivity {
             HttpURLConnection httpcon;
             OutputStream os;
             BufferedWriter writer;
+
             try {
 
                 if (!internalFile.exists()) {
@@ -429,29 +429,31 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "File is empty!", Toast.LENGTH_LONG).show();
                     return false;
                 }
-                httpcon = getConnection();
-                //Log.i(TAG, httpcon.getHeaderField(0));
 
+                httpcon = getConnection();
                 httpcon.connect();
                 os = httpcon.getOutputStream();
                 writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-
-                while (fileScanner.hasNextLine()) {
-                    /*String body = toJSON(fileScanner.nextLine());
-                    if (body != null) {
-
-                        writer.write(body);
-                    }*/
-                    Log.i(TAG, fileScanner.nextLine());
-
-                }
+//                while (fileScanner.hasNextLine()) {
+//                    /*String body = toJSON(fileScanner.nextLine());
+//                    if (body != null) {
+//
+//                        writer.write(body);
+//                    }*/
+//                    Log.i(TAG, fileScanner.nextLine());
+//                }
 
                 String testString = testJSON.toString();
                 Log.i(TAG, testString);
 
-                writer.write(testString);
 
+                writer.write(testString);
                 writer.close();
+                int res = httpcon.getResponseCode();
+                Log.i(TAG,""+res);
+
+
+
                 os.close();
                 httpcon.disconnect();
 
@@ -470,7 +472,7 @@ public class MainActivity extends AppCompatActivity {
                 httpcon = (HttpURLConnection) ((new URL(newUrl).openConnection()));
                 httpcon.setDoOutput(true);
                 httpcon.setRequestProperty("Content-Type", "application/json");
-                httpcon.setRequestProperty("Accept", "application/json");
+                //httpcon.setRequestProperty("Accept", "application/json");
                 httpcon.setRequestMethod("POST");
             } catch (IOException e) {
                 e.printStackTrace();
@@ -526,7 +528,7 @@ public class MainActivity extends AppCompatActivity {
         FileInputStream fin = new FileInputStream(fl);
         BufferedReader reader = new BufferedReader(new InputStreamReader(fin));
         StringBuilder sb = new StringBuilder();
-        String line = null;
+        String line;
         while ((line = reader.readLine()) != null) {
             sb.append(line).append("\n");
         }
