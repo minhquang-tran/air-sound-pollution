@@ -40,6 +40,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -555,6 +556,14 @@ public class MainActivity extends AppCompatActivity {
             SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss.SSS", Locale.US);
             try {
                 Date date = df.parse(input);
+
+                //Hardcoded 7 hour time zone difference
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(date);
+                cal.add(Calendar.HOUR, +7);
+                date = cal.getTime();
+                //End hard code
+
                 return date.getTime();
             } catch (ParseException e) {
                 e.printStackTrace();
