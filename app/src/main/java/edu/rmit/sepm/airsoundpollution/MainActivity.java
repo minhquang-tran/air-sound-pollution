@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -30,11 +31,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.util.List;
 import java.util.Scanner;
@@ -44,12 +44,12 @@ public class MainActivity extends AppCompatActivity {
     private final static String TAG = MainActivity.class.getSimpleName();
 
     static String imei;
-    public static Context context;
 
     private TextView status;
     private TextView data;
     //private BluetoothAdapter bleAdapter;
     private File internalFile;
+    public String fileName = "pollution_data.csv";
     private BufferedWriter bW;
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
@@ -69,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int SCAN_DEVICE_REQUEST = 2;
+
+    JSONObject testJSON;
 
     private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -113,8 +115,8 @@ public class MainActivity extends AppCompatActivity {
 
         status = (TextView) findViewById(R.id.text_status);
         data = (TextView) findViewById(R.id.text_data);
-        internalFile = new File(getFilesDir(), "pollution_data.csv");
-        imei= ((TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
+        internalFile = new File(getFilesDir(), fileName);
+        //imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
 
         // Use this check to determine whether BLE is supported on the device. Then
         // you can selectively disable BLE-related features.
@@ -125,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button_service).setEnabled(false);
         findViewById(R.id.button_receive).setEnabled(false);
 
-        JSONObject grandJson = null;
+        //JSONObject testJSON = null;
         try {
             JSONObject air = new JSONObject();
             air.accumulate("no2", 123);
@@ -146,17 +148,17 @@ public class MainActivity extends AppCompatActivity {
             data.accumulate("sound", sound);
             data.accumulate("gps", gps);
 
-            grandJson = new JSONObject();
-            grandJson.accumulate("UUID", UUID.randomUUID());
-            grandJson.accumulate("deviceID", imei);
-            grandJson.accumulate("capturedAt", 1472407685);
-            grandJson.accumulate("data", data);
+            testJSON = new JSONObject();
+            testJSON.accumulate("UUID", "i"/*UUID.randomUUID()*/);
+            testJSON.accumulate("deviceID", "suck"/*imei*/);
+            testJSON.accumulate("capturedAt", 1572407685);
+            testJSON.accumulate("data", data);
 
         } catch (JSONException e) {
             status.setText(e.toString());
             e.printStackTrace();
         }
-        data.setText(grandJson.toString());
+        data.setText(testJSON.toString());
 
 
         // Initializes Bluetooth adapter.
@@ -290,20 +292,24 @@ public class MainActivity extends AppCompatActivity {
 
     public void receive_data(View view) {
 
+        BluetoothGattCharacteristic airSoundCharacteristic = findCharacteristic(airSoundUUID, mBluetoothLeService.getSupportedGattServices());
+        if (airSoundCharacteristic == null) {
+            Toast.makeText(getApplicationContext(), "Characteristic not found", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         try {
             if (!internalFile.exists()) {
                 if (internalFile.createNewFile())
-                    Toast.makeText(this, "File created: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "File created: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
             } else
-                Toast.makeText(this, "New data appending to: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "New data appending to: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
 
             bW = new BufferedWriter(new FileWriter(internalFile, true));
         } catch (IOException e) {
-            status.setText(e.toString());
             e.printStackTrace();
         }
 
-        BluetoothGattCharacteristic airSoundCharacteristic = findCharacteristic(airSoundUUID, mBluetoothLeService.getSupportedGattServices());
         Log.i(TAG, airSoundCharacteristic.toString());
 
         if (!fetching) {
@@ -324,53 +330,20 @@ public class MainActivity extends AppCompatActivity {
     public void view_data(View view) {
         String output = null;
         try {
+            if (internalFile.exists()) {
+                Toast.makeText(getApplicationContext(), R.string.status_file_not_exist, Toast.LENGTH_LONG).show();
+                return;
+            }
             output = getStringFromFile(internalFile);
             status.setText(internalFile.getPath());
         } catch (Exception e) {
-            if (e instanceof FileNotFoundException) {
-                status.setText(getString(R.string.status_file_not_exist));
-            } else {
-                status.setText(e.toString());
-                e.printStackTrace();
-            }
+            e.printStackTrace();
         }
         data.setText(output);
     }
 
     public void upload_data(View view) {
-        Scanner fileScanner;
-        HttpURLConnection httpcon = getConnection();
-        
-        try {
-            fileScanner = new Scanner(internalFile);
-            if (!fileScanner.hasNextLine()) {
-                Toast.makeText(this, "File is empty!", Toast.LENGTH_LONG).show();
-                return;
-            }
-            if (httpcon == null) {
-                Toast.makeText(this, "Connection failed", Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            httpcon.connect();
-            while (fileScanner.hasNextLine()) {
-                /*String body = toJSON(fileScanner.nextLine());
-                if (body != null) {
-
-
-                }*/
-                data.append(fileScanner.nextLine().replaceAll(" ","") + "\n");
-            }
-            httpcon.disconnect();
-
-        } catch (IOException e) {
-            if (e instanceof FileNotFoundException) {
-                Toast.makeText(this, R.string.status_file_not_exist, Toast.LENGTH_LONG).show();
-            } else {
-                status.setText(e.toString());
-                e.printStackTrace();
-            }
-        }
+        new UploadTask().execute();
 
         //Empty file
         /*
@@ -415,23 +388,6 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    public HttpURLConnection getConnection() {
-        String newUrl = "http://welove.earth:1201/api/receiver";            // set up then connect
-        HttpURLConnection httpcon = null;
-        try {
-            httpcon = (HttpURLConnection) ((new URL(newUrl).openConnection()));
-            httpcon.setDoOutput(true);
-            httpcon.setRequestProperty("Content-Type", "application/json");
-            httpcon.setRequestProperty("Accept", "application/json");
-            httpcon.setRequestMethod("POST");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return httpcon;
-    }
-
-
-
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
@@ -441,6 +397,129 @@ public class MainActivity extends AppCompatActivity {
         return intentFilter;
     }
 
+    private class UploadTask extends AsyncTask<String, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(String... params) {
+            return uploadData();
+        }
+
+        protected void onPostExecute(Boolean result) {
+            Log.i(TAG, ""+result);
+
+            if (result) {
+                Toast.makeText(getApplicationContext(), "Task done", Toast.LENGTH_LONG).show();
+                Log.i(TAG, "task done");
+            }
+        }
+
+        private Boolean uploadData() {
+            Scanner fileScanner;
+            HttpURLConnection httpcon;
+            OutputStream os;
+            BufferedWriter writer;
+            try {
+
+                if (!internalFile.exists()) {
+                    Toast.makeText(getApplicationContext(), R.string.status_file_not_exist, Toast.LENGTH_LONG).show();
+                    return false;
+                }
+                fileScanner = new Scanner(internalFile);
+                if (!fileScanner.hasNextLine()) {
+                    Toast.makeText(getApplicationContext(), "File is empty!", Toast.LENGTH_LONG).show();
+                    return false;
+                }
+                httpcon = getConnection();
+                //Log.i(TAG, httpcon.getHeaderField(0));
+
+                httpcon.connect();
+                os = httpcon.getOutputStream();
+                writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+
+                while (fileScanner.hasNextLine()) {
+                    /*String body = toJSON(fileScanner.nextLine());
+                    if (body != null) {
+
+                        writer.write(body);
+                    }*/
+                    Log.i(TAG, fileScanner.nextLine());
+
+                }
+
+                String testString = testJSON.toString();
+                Log.i(TAG, testString);
+
+                writer.write(testString);
+
+                writer.close();
+                os.close();
+                httpcon.disconnect();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return true;
+
+
+        }
+
+        private HttpURLConnection getConnection() {
+            String newUrl = "http://welove.earth:1201/api/receiver";            // set up then connect
+            HttpURLConnection httpcon = null;
+            try {
+                httpcon = (HttpURLConnection) ((new URL(newUrl).openConnection()));
+                httpcon.setDoOutput(true);
+                httpcon.setRequestProperty("Content-Type", "application/json");
+                httpcon.setRequestProperty("Accept", "application/json");
+                httpcon.setRequestMethod("POST");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return httpcon;
+        }
+
+        private String toJSON(String dataPoint) {
+            String[] dataArray = dataPoint.split(",");
+            if (dataArray.length == DataSig.values().length) {
+                try {
+                    JSONObject air = new JSONObject();
+                    air.accumulate(DataSig.no2.name(), dataArray[DataSig.no2.ordinal()]);
+                    air.accumulate("pm2", 456);
+                    air.accumulate("o3", 789);
+
+                    JSONObject sound = new JSONObject();
+                    sound.accumulate("level", "over");
+                    sound.accumulate("gain", 2.5);
+                    sound.accumulate("dB", null);
+
+                    JSONObject gps = new JSONObject();
+                    gps.accumulate("lat", 10.12304);
+                    gps.accumulate("lng", 110.012031);
+
+                    JSONObject data = new JSONObject();
+                    data.accumulate("ahqi", air);
+                    data.accumulate("sound", sound);
+                    data.accumulate("gps", gps);
+
+                    JSONObject grandJson = new JSONObject();
+                    grandJson.accumulate("UUID", UUID.randomUUID());
+                    grandJson.accumulate("deviceID", MainActivity.imei);
+                    grandJson.accumulate(DataSig.capturedAt.name(), strToTimestamp(dataArray[DataSig.capturedAt.ordinal()]));
+                    grandJson.accumulate("data", data);
+
+                    return grandJson.toString();
+                } catch (JSONException e) {
+                    Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        }
+
+        private String strToTimestamp(String input) {
+            return null;
+        }
+    }
 
     //Method below are for printing out the data in internal file. Used for debugging purpose
     public static String getStringFromFile(File fl) throws Exception {
@@ -454,6 +533,10 @@ public class MainActivity extends AppCompatActivity {
         reader.close();
         fin.close();
         return sb.toString();
+    }
+
+    public TextView getDataView() {
+        return this.data;
     }
 
 }
