@@ -11,7 +11,6 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.IBinder;
-import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
@@ -27,10 +26,8 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -40,7 +37,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -51,26 +47,36 @@ import java.util.UUID;
 public class MainActivity extends AppCompatActivity {
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
+
     private final static String TAG = MainActivity.class.getSimpleName();
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int SCAN_DEVICE_REQUEST = 2;
+
     static String imei;
     private final String LIST_NAME = "NAME";
     private final String LIST_UUID = "UUID";
+
     public String fileName = "pollution_data.csv";
+
     JSONObject testJSON;
+
     private TextView status;
     private TextView data;
     //private BluetoothAdapter bleAdapter;
+
     private File internalFile;
     private BufferedWriter bW;
     private String mDeviceAddress = "";
     private String receivedText = "";
+
     private BluetoothLeService mBluetoothLeService;
     private ServiceConnection mServiceConnection;
+
     private UUID airSoundUUID = UUID.fromString(Attributes.AIR_SOUND_SOLUTION);
+
     private boolean mConnected = false;
     private boolean fetching = false;
+
     private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -107,28 +113,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private static IntentFilter makeGattUpdateIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        return intentFilter;
-    }
 
-    //Method below are for printing out the data in internal file. Used for debugging purpose
-    public static String getStringFromFile(File fl) throws Exception {
-        FileInputStream fin = new FileInputStream(fl);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(fin));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            sb.append(line).append("\n");
-        }
-        reader.close();
-        fin.close();
-        return sb.toString();
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,37 +135,39 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button_receive).setEnabled(false);
 
 //        JSONObject testJSON = null;
-        try {
-            JSONObject air = new JSONObject();
-            air.accumulate("no2", 123);
-            air.accumulate("pm2", 456);
-            air.accumulate("o3", 789);
+//        try {
+//            JSONObject air = new JSONObject();
+//            air.accumulate("no2", 123);
+//            air.accumulate("pm2", 456);
+//            air.accumulate("o3", 789);
+//
+//            JSONObject sound = new JSONObject();
+//            sound.accumulate("level", "over");
+//            sound.accumulate("gain", 2.5);
+//            sound.accumulate("dB", null);
+//
+//            JSONObject gps = new JSONObject();
+//            gps.accumulate("lat", 10.12304);
+//            gps.accumulate("lng", 110.012031);
+//
+//            JSONObject data = new JSONObject();
+//            data.accumulate("ahqi", air);
+//            data.accumulate("sound", sound);
+//            data.accumulate("gps", gps);
+//
+//            testJSON = new JSONObject();
+//            testJSON.accumulate("UUID", UUID.randomUUID());
+//            testJSON.accumulate("deviceID", imei);
+//            testJSON.accumulate("capturedAt", 1572407685);
+//            testJSON.accumulate("data", data);
+//
+//        } catch (JSONException e) {
+//            status.setText(e.toString());
+//            e.printStackTrace();
+//        }
+//        data.setText(testJSON.toString());
 
-            JSONObject sound = new JSONObject();
-            sound.accumulate("level", "over");
-            sound.accumulate("gain", 2.5);
-            sound.accumulate("dB", null);
-
-            JSONObject gps = new JSONObject();
-            gps.accumulate("lat", 10.12304);
-            gps.accumulate("lng", 110.012031);
-
-            JSONObject data = new JSONObject();
-            data.accumulate("ahqi", air);
-            data.accumulate("sound", sound);
-            data.accumulate("gps", gps);
-
-            testJSON = new JSONObject();
-            testJSON.accumulate("UUID", UUID.randomUUID());
-            testJSON.accumulate("deviceID", imei);
-            testJSON.accumulate("capturedAt", 1572407685);
-            testJSON.accumulate("data", data);
-
-        } catch (JSONException e) {
-            status.setText(e.toString());
-            e.printStackTrace();
-        }
-        data.setText(testJSON.toString());
+        status.setText("Device ID: " + imei);
 
 
         // Initializes Bluetooth adapter.
@@ -227,18 +214,25 @@ public class MainActivity extends AppCompatActivity {
         Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
         startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
 
-        mServiceConnection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName componentName, IBinder service) {
-                Log.i(TAG, "Service called");
-                mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
-                if (!mBluetoothLeService.initialize()) {
-                    Log.e(TAG, "Unable to initialize Bluetooth");
-                    finish();
-                }
-                // Automatically connects to the device upon successful start-up initialization.
 
-                mBluetoothLeService.connect(mDeviceAddress);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
+            mServiceConnection = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName componentName, IBinder service) {
+                    Log.i(TAG, "Service called");
+                    mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
+                    if (!mBluetoothLeService.initialize()) {
+                        Log.e(TAG, "Unable to initialize Bluetooth");
+                        finish();
+                    }
+                    // Automatically connects to the device upon successful start-up initialization.
+
+                    mBluetoothLeService.connect(mDeviceAddress);
 
                 /*BluetoothGattCharacteristic airSoundCharacteristic = findCharacteristic(airSoundUUID, mBluetoothLeService.getSupportedGattServices());
                 Log.i(TAG,airSoundCharacteristic.toString());
@@ -246,21 +240,16 @@ public class MainActivity extends AppCompatActivity {
                 mBluetoothLeService.setCharacteristicNotification(airSoundCharacteristic, true);*/
 
 
-            }
+                }
 
-            @Override
-            public void onServiceDisconnected(ComponentName componentName) {
-                mBluetoothLeService = null;
-                Log.e(TAG, "Disconnected from " + mDeviceAddress);
+                @Override
+                public void onServiceDisconnected(ComponentName componentName) {
+                    mBluetoothLeService = null;
+                    Log.e(TAG, "Disconnected from " + mDeviceAddress);
 
-            }
-        };
-    }
+                }
+            };
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-
-        if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
             String deviceName = data.getStringExtra(EXTRAS_DEVICE_NAME);
             mDeviceAddress = data.getStringExtra(EXTRAS_DEVICE_ADDRESS);
             status.setText(deviceName + " " + mDeviceAddress);
@@ -366,7 +355,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        data.setText(output);
+        data.setText(output.replaceAll(" ", ""));
     }
 
     public void upload_data(View view) {
@@ -413,10 +402,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class UploadTask extends AsyncTask<String, Void, String> {
-        private final String TASK_DONE = "Task done";
         private final String ERROR_FILE_NA = getString(R.string.status_file_not_exist);
         private final String ERROR_FILE_EMPTY = "File is empty!";
         private final String ERROR_TERMINATED = "RESPONSE NOT OK. TERMINATED";
+        private final String TASK_DONE = "Task done";
 
         Scanner fileScanner;
 
@@ -426,13 +415,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String result) {
-                Toast.makeText(getApplicationContext(), result, Toast.LENGTH_LONG).show();
-                Log.i(TAG, result);
+            Toast.makeText(getApplicationContext(), result, Toast.LENGTH_LONG).show();
+            Log.i(TAG, result);
         }
 
         private String uploadData() {
 
-            HttpURLConnection httpcon;
+            HttpURLConnection httpCon;
             OutputStream os;
             BufferedWriter writer;
             int responseCode;
@@ -450,17 +439,17 @@ public class MainActivity extends AppCompatActivity {
                 while (fileScanner.hasNextLine()) {
                     String body = toJSON(fileScanner.nextLine());
                     if (body != null) {
-                        Log.i(TAG,body);
-                        httpcon = getConnection();
-                        httpcon.connect();
-                        os = httpcon.getOutputStream();
+                        Log.i(TAG, body);
+                        httpCon = getConnection();
+                        httpCon.connect();
+                        os = httpCon.getOutputStream();
                         writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
                         writer.write(body);
                         writer.close();
-                        responseCode = httpcon.getResponseCode();
+                        responseCode = httpCon.getResponseCode();
                         Log.i(TAG, "" + responseCode);
                         os.close();
-                        httpcon.disconnect();
+                        httpCon.disconnect();
                         if (responseCode == HttpURLConnection.HTTP_OK) {
                             //delete line
                         } else {
@@ -471,25 +460,24 @@ public class MainActivity extends AppCompatActivity {
                 }
 
 
-
 //                String testString = testJSON.toString();
 //                Log.i(TAG, testString);
 //
 //                for (int i = 0; i<1; i++) {
-//                    httpcon = getConnection();
-//                    httpcon.connect();
-//                    os = httpcon.getOutputStream();
+//                    httpCon = getConnection();
+//                    httpCon.connect();
+//                    os = httpCon.getOutputStream();
 //                    writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
 //                    writer.write(testString);
 //                    writer.close();
-//                    int res = httpcon.getResponseCode();
+//                    int res = httpCon.getResponseCode();
 //                    Log.i(TAG, "" + res);
 //                    os.close();
 //
 //                }
 
 
-//                httpcon.disconnect();
+//                httpCon.disconnect();
 
             } catch (IOException e) {
                 return e.toString();
@@ -501,46 +489,63 @@ public class MainActivity extends AppCompatActivity {
 
         private HttpURLConnection getConnection() {
             String newUrl = "http://welove.earth:1201/api/receiver";            // set up then connect
-            HttpURLConnection httpcon = null;
+            HttpURLConnection httpCon = null;
             try {
-                httpcon = (HttpURLConnection) ((new URL(newUrl).openConnection()));
-                httpcon.setDoOutput(true);
-                httpcon.setRequestProperty("Content-Type", "application/json");
-                //httpcon.setRequestProperty("Accept", "application/json");
-                httpcon.setRequestMethod("POST");
+                httpCon = (HttpURLConnection) ((new URL(newUrl).openConnection()));
+                httpCon.setDoOutput(true);
+                httpCon.setRequestProperty("Content-Type", "application/json");
+                //httpCon.setRequestProperty("Accept", "application/json");
+                httpCon.setRequestMethod("POST");
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            return httpcon;
+            return httpCon;
         }
 
         private String toJSON(String dataPoint) {
-            String[] dataArray = dataPoint.replaceAll(" ","").split(",");
+            String[] dataArray = dataPoint.replaceAll(" ", "").split(",");
             if (dataArray.length == DataSig.values().length) {
                 try {
+                    // + AIR
                     JSONObject air = new JSONObject();
-                    air.accumulate("no2", 123);
+                    // NO2
+                    air.accumulate("no2", -1);
+                    // PM2.5
                     air.accumulate(DataSig.pm2.name(), dataArray[DataSig.pm2.ordinal()]);
-                    air.accumulate("o3", 789);
+                    // O3
+                    air.accumulate("o3", -1);
 
+                    // + SOUND
                     JSONObject sound = new JSONObject();
-                    sound.accumulate(DataSig.level.name(), ( dataArray[DataSig.level.ordinal()].equals("1") ) ? "over" : "under");
-                    sound.accumulate("gain", 2.5);
-                    sound.accumulate("dB", null);
+                    // Level
+                    sound.accumulate(DataSig.level.name(), (dataArray[DataSig.level.ordinal()].equals("1")) ? "over" : "under");
+                    // Gain
+                    sound.accumulate("gain", -1);
+                    // dB
+                    sound.accumulate("dB", -1);
 
+                    // + COORDS
                     JSONObject gps = new JSONObject();
+                    // Latitude
                     gps.accumulate(DataSig.lat.name(), dataArray[DataSig.lat.ordinal()]);
+                    //Longitude
                     gps.accumulate(DataSig.lng.name(), dataArray[DataSig.lng.ordinal()]);
 
+                    // ++ Data assembly
                     JSONObject data = new JSONObject();
                     data.accumulate("ahqi", air);
                     data.accumulate("sound", sound);
                     data.accumulate("gps", gps);
 
+                    // ++ Extras
                     JSONObject grandJson = new JSONObject();
+                    // UUID
                     grandJson.accumulate("UUID", UUID.randomUUID());
+                    // IMEI
                     grandJson.accumulate("deviceID", MainActivity.imei);
+                    // Timestamp
                     grandJson.accumulate(DataSig.capturedAt.name(), /*dataArray[DataSig.capturedAt.ordinal()]*/strToTimestamp(dataArray[DataSig.capturedAt.ordinal()]));
+                    // Data
                     grandJson.accumulate("data", data);
 
                     return grandJson.toString();
@@ -567,6 +572,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private static IntentFilter makeGattUpdateIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        return intentFilter;
+    }
+
+    //Method below are for printing out the data in internal file. Used for debugging purpose
+    public static String getStringFromFile(File fl) throws Exception {
+        FileInputStream fin = new FileInputStream(fl);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(fin));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line).append("\n");
+        }
+        reader.close();
+        fin.close();
+        return sb.toString();
+    }
 }
 
 
