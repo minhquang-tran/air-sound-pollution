@@ -45,6 +45,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Scanner;
+import java.util.TimeZone;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
@@ -554,15 +555,9 @@ public class MainActivity extends AppCompatActivity {
         private long strToTimestamp(String input) {
 //            input = "19700101000000.000";
             SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss.SSS", Locale.US);
+            df.setTimeZone(TimeZone.getTimeZone("UTC"));
             try {
                 Date date = df.parse(input);
-
-                //Hardcoded 7 hour time zone difference
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(date);
-                cal.add(Calendar.HOUR, +7);
-                date = cal.getTime();
-                //End hard code
 
                 return date.getTime();
             } catch (ParseException e) {
