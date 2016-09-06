@@ -241,16 +241,6 @@ public class MainActivity extends AppCompatActivity {
         //final boolean result = mBluetoothLeService.connect(mDeviceAddress);
         //Log.d(TAG, "Connect request result=" + result);
 
-        //read data from file
-
-        //update local storage
-        //Toast.makeText(this, "abc", Toast.LENGTH_LONG).show();
-
-        //create file if not existed
-
-
-        //append new line
-
         /*try {
             //future for each loop here
             bW.write("0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
@@ -480,24 +470,6 @@ public class MainActivity extends AppCompatActivity {
 
 //                    Log.i(TAG, fileScanner.nextLine());
                 }
-
-
-//                String testString = testJSON.toString();
-//                Log.i(TAG, testString);
-//
-//                for (int i = 0; i<1; i++) {
-//                    httpCon = getConnection();
-//                    httpCon.connect();
-//                    os = httpCon.getOutputStream();
-//                    writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-//                    writer.write(testString);
-//                    writer.close();
-//                    int res = httpCon.getResponseCode();
-//                    Log.i(TAG, "" + res);
-//                    os.close();
-//
-//                }
-
 
 //                httpCon.disconnect();
 
