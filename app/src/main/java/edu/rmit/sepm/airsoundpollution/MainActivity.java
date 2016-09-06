@@ -41,7 +41,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Scanner;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -161,8 +160,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (mServiceConnection != null)
-            unbindService(mServiceConnection);
-        mBluetoothLeService = null;
+            try {
+                unbindService(mServiceConnection);
+            } catch(IllegalArgumentException e) {
+                e.printStackTrace();
+            }
+        if (mBluetoothLeService != null)
+            mBluetoothLeService.disconnect();
         if (bW != null) {
             try {
                 bW.flush();
@@ -174,15 +178,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void connect_bluetooth(View view) {
+        // Start activity to scan for compatible device
         Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
         startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
-
-
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-
+        // Receive device info (MAC Address)
         if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
             mServiceConnection = new ServiceConnection() {
                 @Override
@@ -267,7 +270,6 @@ public class MainActivity extends AppCompatActivity {
     public void receive_data(View view) {
         BluetoothGattCharacteristic airSoundCharacteristic = findCharacteristic(airSoundUUID, mBluetoothLeService.getSupportedGattServices());
 
-
         try {
             if (!fetching) {
                 fetching = true;
@@ -306,6 +308,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Write received data tp file
     private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -325,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     //Log.i(TAG,"AVAILABLE");
 
-                    if(fetching) {
+                    if (fetching) {
                         receivedText = intent.getStringExtra(BluetoothLeService.EXTRA_DATA).replaceAll(" ", "");
                         //byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
                         Log.i(TAG, receivedText);
@@ -341,12 +344,6 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    // Code to manage Service lifecycle.
-
-
-    // Demonstrates how to iterate through the supported GATT Services/Characteristics.
-    // In this sample, we populate the data structure that is bound to the ExpandableListView
-    // on the UI.
 
     public void view_data(View view) {
         String output = null;
@@ -379,6 +376,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Find the specific characteristic that the device used to send data
     private BluetoothGattCharacteristic findCharacteristic(UUID target, List<BluetoothGattService> gattServices) {
         if (gattServices == null) return null;
         Log.i(TAG, "" + gattServices.size());
@@ -403,13 +401,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    // Upload file content to server
     private class UploadTask extends AsyncTask<String, String, String> {
         private final String ERROR_FILE_NA = getString(R.string.status_file_not_exist);
         private final String ERROR_FILE_EMPTY = "File is empty!";
         private final String ERROR_TERMINATED = "RESPONSE NOT OK. TERMINATED";
         private final String TASK_DONE = "Task done";
 
-        Scanner fileScanner;
+        BufferedReader bR;
+
+        int linesCount;
+        int lineNo;
 
         @Override
         protected String doInBackground(String... params) {
@@ -418,11 +420,14 @@ public class MainActivity extends AppCompatActivity {
 
 
         protected void onProgressUpdate(String... values) {
-
+            status.setText("Sending line " + lineNo + " of " + linesCount);
+            data.setText(values[0]);
         }
 
         protected void onPostExecute(String result) {
             Toast.makeText(getApplicationContext(), result, Toast.LENGTH_LONG).show();
+            status.setText("Done!");
+            data.setText("");
             Log.i(TAG, result);
         }
 
@@ -431,6 +436,7 @@ public class MainActivity extends AppCompatActivity {
             HttpURLConnection httpCon;
             OutputStream os;
             BufferedWriter writer;
+            String body;
             int responseCode;
 
             try {
@@ -438,32 +444,40 @@ public class MainActivity extends AppCompatActivity {
                 if (!internalFile.exists()) {
                     return ERROR_FILE_NA;
                 }
-                fileScanner = new Scanner(internalFile);
-                if (!fileScanner.hasNextLine()) {
+
+                bR = new BufferedReader(new FileReader(internalFile));
+                linesCount = 0;
+                while (bR.readLine() != null) linesCount++;
+                bR.close();
+                if (linesCount == 0) {
                     return ERROR_FILE_EMPTY;
+
                 }
 
-                while (fileScanner.hasNextLine()) {
-                    String body = toJSON(fileScanner.nextLine());
+                bR = new BufferedReader(new FileReader(internalFile));
+
+                lineNo = 0;
+                while ((body = toJSON(bR.readLine())) != null) {
+                    //String body = toJSON(bR.nextLine());
+                    lineNo++;
                     publishProgress(body);
-                    if (body != null) {
-                        Log.i(TAG, body);
-                        httpCon = getConnection();
-                        httpCon.connect();
-                        os = httpCon.getOutputStream();
-                        writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-//                        writer.write(body);
-                        writer.close();
-                        responseCode = httpCon.getResponseCode();
-                        Log.i(TAG, "" + responseCode);
-                        os.close();
-                        httpCon.disconnect();
-                        if (responseCode == HttpURLConnection.HTTP_OK) {
-                            //delete line
-                        } else {
-                            return ERROR_TERMINATED;
-                        }
+                    Log.i(TAG, body);
+                    httpCon = getConnection();
+                    httpCon.connect();
+                    os = httpCon.getOutputStream();
+                    writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                    writer.write(body);
+                    writer.close();
+                    responseCode = httpCon.getResponseCode();
+                    Log.i(TAG, "" + responseCode);
+                    os.close();
+                    httpCon.disconnect();
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        //delete line
+                    } else {
+                        return ERROR_TERMINATED;
                     }
+
 //                    Log.i(TAG, fileScanner.nextLine());
                 }
 
@@ -511,6 +525,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         private String toJSON(String dataPoint) {
+            if (dataPoint == null) return null;
             String[] dataArray = dataPoint.replaceAll(" ", "").split(",");
             if (dataArray.length == DataSig.values().length) {
                 try {
@@ -565,6 +580,7 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
+        // TIme data to EPOCH timestamp (milliseconds from 1970/01/01
         private long strToTimestamp(String input) {
 //            input = "19700101000000.000";
             SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss.SSS", Locale.US);
@@ -580,6 +596,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Used to filter received broadcasts
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
