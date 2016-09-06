@@ -136,7 +136,7 @@ public class BluetoothLeService extends Service {
                 final StringBuilder stringBuilder = new StringBuilder(data.length);
                 for(byte byteChar : data)
                     stringBuilder.append(String.format("%02X ", byteChar));
-                Log.i(TAG,new String(data));
+                //Log.i(TAG,new String(data));
                 intent.putExtra(EXTRA_DATA, new String(data));
                 //intent.putExtra(EXTRA_DATA, data);
 

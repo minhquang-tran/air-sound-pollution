@@ -28,6 +28,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -76,44 +77,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean mConnected = false;
     private boolean fetching = false;
-
-    private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            Log.d(TAG, "Action = " + action);
-            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-                mConnected = true;
-                //updateConnectionState(R.string.connected);
-            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                mConnected = false;
-                //updateConnectionState(R.string.disconnected);
-                //data.setText("");
-            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-                // Show all the supported services and characteristics on the user interface.
-            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-
-                try {
-                    //Log.i(TAG,"AVAILABLE");
-
-                    receivedText = intent.getStringExtra(BluetoothLeService.EXTRA_DATA).replaceAll(" ", "");
-                    //byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-                    //Log.i(TAG,receivedText);
-                    status.setText(receivedText);
-                    bW.write(receivedText);
-                    //status.setText(new String(data));
-                    //bW.write(new String(data));
-                } catch (IOException e) {
-                    status.setText(e.toString());
-                    e.printStackTrace();
-                }
-
-
-            }
-        }
-    };
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -175,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
         //bleAdapter = bluetoothManager.getAdapter();
     }
 
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -204,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
                 bW.flush();
                 bW.close();
             } catch (IOException e) {
-                status.setText(e.toString());
                 e.printStackTrace();
             }
         }
@@ -266,6 +229,7 @@ public class MainActivity extends AppCompatActivity {
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
+
         findViewById(R.id.button_receive).setEnabled(true);
 
         //registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
@@ -301,40 +265,81 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void receive_data(View view) {
-
         BluetoothGattCharacteristic airSoundCharacteristic = findCharacteristic(airSoundUUID, mBluetoothLeService.getSupportedGattServices());
-        if (airSoundCharacteristic == null) {
-            Toast.makeText(getApplicationContext(), "Characteristic not found", Toast.LENGTH_LONG).show();
-            return;
-        }
+
 
         try {
-            if (!internalFile.exists()) {
-                if (internalFile.createNewFile())
-                    Toast.makeText(getApplicationContext(), "File created: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
-            } else
-                Toast.makeText(getApplicationContext(), "New data appending to: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
+            if (!fetching) {
+                fetching = true;
+                if (airSoundCharacteristic == null) {
+                    Toast.makeText(getApplicationContext(), "Characteristic not found", Toast.LENGTH_LONG).show();
+                    return;
+                }
 
-            bW = new BufferedWriter(new FileWriter(internalFile, true));
+                if (!internalFile.exists()) {
+                    if (internalFile.createNewFile())
+                        Toast.makeText(getApplicationContext(), "File created: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
+                } else
+                    Toast.makeText(getApplicationContext(), "New data appending to: " + internalFile.getPath(), Toast.LENGTH_LONG).show();
+
+                bW = new BufferedWriter(new FileWriter(internalFile, true));
+//            bW.write("0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
+
+                Log.i(TAG, airSoundCharacteristic.toString());
+                mBluetoothLeService.setCharacteristicNotification(airSoundCharacteristic, true);
+                ((Button) findViewById(R.id.button_receive)).setText(R.string.string_stop);
+
+            } else {
+                fetching = false;
+                mBluetoothLeService.setCharacteristicNotification(airSoundCharacteristic, false);
+                ((Button) findViewById(R.id.button_receive)).setText(R.string.string_receive);
+                bW.flush();
+                bW.close();
+                Log.i(TAG, "Flushed & closed");
+
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        Log.i(TAG, airSoundCharacteristic.toString());
-
-        if (!fetching) {
-            mBluetoothLeService.setCharacteristicNotification(airSoundCharacteristic, true);
-            ((Button) findViewById(R.id.button_receive)).setText(R.string.string_stop);
-            fetching = true;
-        } else {
-            mBluetoothLeService.setCharacteristicNotification(airSoundCharacteristic, false);
-            ((Button) findViewById(R.id.button_receive)).setText(R.string.string_receive);
-            fetching = false;
-        }
-
-        //mBluetoothLeService.readCharacteristic(airSoundCharacteristic);
+        mBluetoothLeService.readCharacteristic(airSoundCharacteristic);
 
     }
+
+    private BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            Log.d(TAG, "Action = " + action);
+            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+                mConnected = true;
+                //updateConnectionState(R.string.connected);
+            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                mConnected = false;
+                //updateConnectionState(R.string.disconnected);
+                //data.setText("");
+            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                // Show all the supported services and characteristics on the user interface.
+            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+
+                try {
+                    //Log.i(TAG,"AVAILABLE");
+
+                    if(fetching) {
+                        receivedText = intent.getStringExtra(BluetoothLeService.EXTRA_DATA).replaceAll(" ", "");
+                        //byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+                        Log.i(TAG, receivedText);
+                        status.setText(receivedText);
+                        bW.write(receivedText);
+                        //status.setText(new String(data));
+                        //bW.write(new String(data));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    };
 
     // Code to manage Service lifecycle.
 
@@ -397,11 +402,8 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    public TextView getDataView() {
-        return this.data;
-    }
 
-    private class UploadTask extends AsyncTask<String, Void, String> {
+    private class UploadTask extends AsyncTask<String, String, String> {
         private final String ERROR_FILE_NA = getString(R.string.status_file_not_exist);
         private final String ERROR_FILE_EMPTY = "File is empty!";
         private final String ERROR_TERMINATED = "RESPONSE NOT OK. TERMINATED";
@@ -412,6 +414,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(String... params) {
             return uploadData();
+        }
+
+
+        protected void onProgressUpdate(String... values) {
+
         }
 
         protected void onPostExecute(String result) {
@@ -438,13 +445,14 @@ public class MainActivity extends AppCompatActivity {
 
                 while (fileScanner.hasNextLine()) {
                     String body = toJSON(fileScanner.nextLine());
+                    publishProgress(body);
                     if (body != null) {
                         Log.i(TAG, body);
                         httpCon = getConnection();
                         httpCon.connect();
                         os = httpCon.getOutputStream();
                         writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-                        writer.write(body);
+//                        writer.write(body);
                         writer.close();
                         responseCode = httpCon.getResponseCode();
                         Log.i(TAG, "" + responseCode);

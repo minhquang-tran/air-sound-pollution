@@ -58,6 +58,7 @@ public class DeviceScanActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.listitem_device);
 
+
         deviceList = (ListView) findViewById(R.id.deviceList);
         deviceList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
