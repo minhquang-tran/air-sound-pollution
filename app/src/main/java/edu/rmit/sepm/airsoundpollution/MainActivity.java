@@ -157,6 +157,9 @@ public class MainActivity extends AppCompatActivity {
                 if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
                     status.setText("Device ID: " + imei);
+                } else {
+                    Log.i(TAG, "DENIED");
+                    finish();
                 }
                 break;
 
@@ -378,6 +381,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void upload_data(View view) {
+        findViewById(R.id.button_upload).setEnabled(false);
         new UploadTask().execute();
 
         //Empty file
@@ -423,6 +427,7 @@ public class MainActivity extends AppCompatActivity {
         private final String ERROR_FILE_NA = getString(R.string.status_file_not_exist);
         private final String ERROR_FILE_EMPTY = "File is empty!";
         private final String ERROR_TERMINATED = "RESPONSE NOT OK. TERMINATED";
+        private final String INVALID_RECORD = "Record invalid";
         private final String TASK_DONE = "Task done";
 
         BufferedReader bR;
@@ -442,6 +447,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String result) {
+            findViewById(R.id.button_upload).setEnabled(true);
             Toast.makeText(getApplicationContext(), result, Toast.LENGTH_LONG).show();
             status.setText("Done!");
             data.setText("");
@@ -453,6 +459,7 @@ public class MainActivity extends AppCompatActivity {
             HttpURLConnection httpCon;
             OutputStream os;
             BufferedWriter writer;
+            String line;
             String body;
             int responseCode;
 
@@ -474,28 +481,28 @@ public class MainActivity extends AppCompatActivity {
                 bR = new BufferedReader(new FileReader(internalFile));
 
                 lineNo = 0;
-                while ((body = toJSON(bR.readLine())) != null) {
-                    //String body = toJSON(bR.nextLine());
+                while ((line = bR.readLine()) != null) {
+                    body = toJSON(line);
                     lineNo++;
                     publishProgress(body);
-                    Log.i(TAG, body);
-                    httpCon = getConnection();
-                    httpCon.connect();
-                    os = httpCon.getOutputStream();
-                    writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-                    writer.write(body);
-                    writer.close();
-                    responseCode = httpCon.getResponseCode();
-                    Log.i(TAG, "" + responseCode);
-                    os.close();
-                    httpCon.disconnect();
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        //delete line
-                    } else {
-                        return ERROR_TERMINATED;
+                    if (!body.equals(INVALID_RECORD)) {
+                        Log.i(TAG, body);
+                        httpCon = getConnection();
+                        httpCon.connect();
+                        os = httpCon.getOutputStream();
+                        writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                        writer.write(body);
+                        writer.close();
+                        responseCode = httpCon.getResponseCode();
+                        Log.i(TAG, "" + responseCode);
+                        os.close();
+                        httpCon.disconnect();
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            //delete line
+                        } else {
+                            return ERROR_TERMINATED;
+                        }
                     }
-
-//                    Log.i(TAG, fileScanner.nextLine());
                 }
 
 //                httpCon.disconnect();
@@ -576,7 +583,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-            return null;
+            return INVALID_RECORD;
         }
 
         // TIme data to EPOCH timestamp (milliseconds from 1970/01/01
