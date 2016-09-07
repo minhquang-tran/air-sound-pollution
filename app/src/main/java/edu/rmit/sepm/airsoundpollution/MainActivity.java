@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_READ_PHONE_STATE = 1;
     private static final int REQUEST_SCAN_DEVICE = 2;
 
-    static String imei;
+    private String imei;
     private final String LIST_NAME = "NAME";
     private final String LIST_UUID = "UUID";
 
@@ -94,7 +94,12 @@ public class MainActivity extends AppCompatActivity {
         status = (TextView) findViewById(R.id.text_status);
         data = (TextView) findViewById(R.id.text_data);
         internalFile = new File(getFilesDir(), fileName);
-        imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
+        try {
+            imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
+            status.setText("Device ID: " + imei);
+        } catch (SecurityException e) {
+            e.printStackTrace();
+        }
 
         // Use this check to determine whether BLE is supported on the device. Then
         // you can selectively disable BLE-related features.
@@ -138,7 +143,6 @@ public class MainActivity extends AppCompatActivity {
 //        }
 //        data.setText(testJSON.toString());
 
-        status.setText("Device ID: " + imei);
 
 
         // Initializes Bluetooth adapter.
@@ -151,7 +155,8 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_READ_PHONE_STATE:
                 if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    //TODO
+                    imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
+                    status.setText("Device ID: " + imei);
                 }
                 break;
 
@@ -559,7 +564,7 @@ public class MainActivity extends AppCompatActivity {
                     // UUID
                     grandJson.accumulate("UUID", UUID.randomUUID());
                     // IMEI
-                    grandJson.accumulate("deviceID", MainActivity.imei);
+                    grandJson.accumulate("deviceID", imei);
                     // Timestamp
                     grandJson.accumulate(DataSig.capturedAt.name(), /*dataArray[DataSig.capturedAt.ordinal()]*/strToTimestamp(dataArray[DataSig.capturedAt.ordinal()]));
                     // Data
