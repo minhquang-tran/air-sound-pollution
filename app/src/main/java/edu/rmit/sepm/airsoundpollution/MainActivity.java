@@ -1,5 +1,6 @@
 package edu.rmit.sepm.airsoundpollution;
 
+import android.Manifest;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
@@ -11,6 +12,8 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.IBinder;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
@@ -49,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 
     private final static String TAG = MainActivity.class.getSimpleName();
-    private static final int REQUEST_ENABLE_BT = 1;
-    private static final int SCAN_DEVICE_REQUEST = 2;
+    private static final int REQUEST_READ_PHONE_STATE = 1;
+    private static final int REQUEST_SCAN_DEVICE = 2;
 
     static String imei;
     private final String LIST_NAME = "NAME";
@@ -81,6 +84,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE);
+
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, REQUEST_READ_PHONE_STATE);
+        }
 
         status = (TextView) findViewById(R.id.text_status);
         data = (TextView) findViewById(R.id.text_data);
@@ -137,6 +146,19 @@ public class MainActivity extends AppCompatActivity {
         //bleAdapter = bluetoothManager.getAdapter();
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_READ_PHONE_STATE:
+                if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    //TODO
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
 
     @Override
     protected void onResume() {
@@ -180,13 +202,13 @@ public class MainActivity extends AppCompatActivity {
     public void connect_bluetooth(View view) {
         // Start activity to scan for compatible device
         Intent scanDeviceIntent = new Intent(this, DeviceScanActivity.class);
-        startActivityForResult(scanDeviceIntent, SCAN_DEVICE_REQUEST);
+        startActivityForResult(scanDeviceIntent, REQUEST_SCAN_DEVICE);
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         // Receive device info (MAC Address)
-        if (requestCode == SCAN_DEVICE_REQUEST && resultCode == RESULT_OK) {
+        if (requestCode == REQUEST_SCAN_DEVICE && resultCode == RESULT_OK) {
             mServiceConnection = new ServiceConnection() {
                 @Override
                 public void onServiceConnected(ComponentName componentName, IBinder service) {
@@ -294,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        mBluetoothLeService.readCharacteristic(airSoundCharacteristic);
+        //mBluetoothLeService.readCharacteristic(airSoundCharacteristic);
 
     }
 
