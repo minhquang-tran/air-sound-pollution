@@ -538,11 +538,11 @@ public class MainActivity extends AppCompatActivity {
                     // + AIR
                     JSONObject air = new JSONObject();
                     // NO2
-                    air.accumulate("no2", -1);
+                    air.accumulate(DataSig.no2.name(), dataArray[DataSig.no2.ordinal()]);
                     // PM2.5
                     air.accumulate(DataSig.pm2.name(), dataArray[DataSig.pm2.ordinal()]);
                     // O3
-                    air.accumulate("o3", -1);
+                    air.accumulate(DataSig.o3.name(), dataArray[DataSig.o3.ordinal()]);
 
                     // + SOUND
                     JSONObject sound = new JSONObject();
