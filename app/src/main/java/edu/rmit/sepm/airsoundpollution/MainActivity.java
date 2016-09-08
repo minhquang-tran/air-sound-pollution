@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -39,6 +40,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.Permission;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -52,7 +54,14 @@ public class MainActivity extends AppCompatActivity {
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 
     private final static String TAG = MainActivity.class.getSimpleName();
-    private static final int REQUEST_READ_PHONE_STATE = 1;
+
+    private static final int REQUEST_ANDROID_M_SPECIFICS = 1;
+    String[] PERMISSIONS = {
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE};
+
     private static final int REQUEST_SCAN_DEVICE = 2;
 
     private String imei;
@@ -85,20 +94,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE);
-
-        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, REQUEST_READ_PHONE_STATE);
-        }
-
         status = (TextView) findViewById(R.id.text_status);
         data = (TextView) findViewById(R.id.text_data);
         internalFile = new File(getFilesDir(), fileName);
-        try {
+
+        if(!hasPermissions(this, PERMISSIONS)){
+            ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_ANDROID_M_SPECIFICS);
+        } else {
             imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
             status.setText("Device ID: " + imei);
-        } catch (SecurityException e) {
-            e.printStackTrace();
         }
 
         // Use this check to determine whether BLE is supported on the device. Then
@@ -109,58 +113,36 @@ public class MainActivity extends AppCompatActivity {
         }
         findViewById(R.id.button_service).setEnabled(false);
         findViewById(R.id.button_receive).setEnabled(false);
+    }
 
-//        JSONObject testJSON = null;
-//        try {
-//            JSONObject air = new JSONObject();
-//            air.accumulate("no2", 123);
-//            air.accumulate("pm2", 456);
-//            air.accumulate("o3", 789);
-//
-//            JSONObject sound = new JSONObject();
-//            sound.accumulate("level", "over");
-//            sound.accumulate("gain", 2.5);
-//            sound.accumulate("dB", null);
-//
-//            JSONObject gps = new JSONObject();
-//            gps.accumulate("lat", 10.12304);
-//            gps.accumulate("lng", 110.012031);
-//
-//            JSONObject data = new JSONObject();
-//            data.accumulate("ahqi", air);
-//            data.accumulate("sound", sound);
-//            data.accumulate("gps", gps);
-//
-//            testJSON = new JSONObject();
-//            testJSON.accumulate("UUID", UUID.randomUUID());
-//            testJSON.accumulate("deviceID", imei);
-//            testJSON.accumulate("capturedAt", 1572407685);
-//            testJSON.accumulate("data", data);
-//
-//        } catch (JSONException e) {
-//            status.setText(e.toString());
-//            e.printStackTrace();
-//        }
-//        data.setText(testJSON.toString());
-
-
-
-        // Initializes Bluetooth adapter.
-        //final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        //bleAdapter = bluetoothManager.getAdapter();
+    public static boolean hasPermissions(Context context, String... permissions) {
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {
+            for (String permission : permissions) {
+                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case REQUEST_READ_PHONE_STATE:
-                if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+            case REQUEST_ANDROID_M_SPECIFICS:
+                for (int permission: grantResults) {
+                    if (permission == PackageManager.PERMISSION_DENIED) {
+                        Log.i(TAG, "DENIED");
+                        finish();
+                    }
+                }
+                try {
                     imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
                     status.setText("Device ID: " + imei);
-                } else {
-                    Log.i(TAG, "DENIED");
-                    finish();
+                } catch (SecurityException e) {
+                    e.printStackTrace();
                 }
+
                 break;
 
             default:
@@ -192,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
         if (mServiceConnection != null)
             try {
                 unbindService(mServiceConnection);
-            } catch(IllegalArgumentException e) {
+            } catch (IllegalArgumentException e) {
                 e.printStackTrace();
             }
         if (mBluetoothLeService != null)
